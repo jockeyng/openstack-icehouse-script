@@ -1,11 +1,27 @@
 #!/bin/bash
 
-IP_ADDRESS=10.0.0.11 
+CONTROLLER_IP=10.0.0.11 
+CONTROLLER_NAME=controller
+COMPUTE1_IP=10.0.0.31 
 
 
 case $1 in
 	"hello")
 		echo "Hello, how are you ?"
+		;;
+	"hosts")
+		echo -e "Config Hosts......"
+		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
+		sudo /etc/init.d/networking restart
+		echo -e "......Done!"
+		;;
+	"hostname")
+		echo -e "Config Hostname......"
+		hostname
+		sed -i "s/.*/$CONTROLLER_NAME/g" /etc/hostname		
+		sudo service hostname restart
+		hostname
+		echo -e "......Done!"
 		;;
 	"basic")
 		echo -e "basic configuration......"
@@ -19,11 +35,11 @@ case $1 in
 		
 		##	hostname
 		hostname
-		sed -i 's/ubuntu/compute1/g' /etc/hostname		
+		sed -i "s/.*/$CONTROLLER_NAME/g" /etc/hostname		
 				
 		##	hosts
 		#sed -i '3,4d' /etc/hosts
-		sed -i '2 a\192.168.0.11    controller\n192.168.0.31    compute1' /etc/hosts
+		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
 		
 		##	network
 		sed -i '1,10!d' /etc/network/interfaces
