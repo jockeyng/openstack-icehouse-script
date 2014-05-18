@@ -20,6 +20,9 @@ while [ $# -gt 0 ]
    		./nova_install
    		#echo -e 'y\ny\n' | ./nova_install
    		;;
+	neutron)
+   		./neutron
+   		;;
 	nova_restart)
    		 		
    		service nova-api restart
