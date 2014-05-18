@@ -1,56 +1,61 @@
 #!/bin/bash
 
 IP_ADDRESS=10.0.0.11
+NOVA_DBPASS=cuscs
+RABBIT_PASS=cuscs
 
 echo -e "\nInstalling Nova......\n"
 
 source admin-openrc.sh
 
-#apt-get --purge remove --auto-remove nova-api nova-cert nova-conductor nova-consoleauth \
-#  nova-novncproxy nova-scheduler python-novaclient
+apt-get --purge remove --auto-remove nova-api nova-cert nova-conductor nova-consoleauth nova-novncproxy nova-scheduler python-novaclient
   
-apt-get install nova-api nova-cert nova-conductor nova-consoleauth \
-  nova-novncproxy nova-scheduler python-novaclient
+apt-get install nova-api nova-cert nova-conductor nova-consoleauth nova-novncproxy nova-scheduler python-novaclient
 
 
 ##	Config File
 #cat nova.conf >> /etc/nova/nova.conf
 
+sed -i '/\[database\]/d' /etc/nova/nova.conf
+sed -i '/connection = .*/d' /etc/nova/nova.conf
+sed -i '1,16!d' /etc/nova/nova.conf
 
-sed -i '/sql_connection = .*/d' /etc/nova/nova.conf
-sed -i '/rpc_backend = .*/d' /etc/nova/nova.conf
-sed -i '/rabbit_host = .*/d' /etc/nova/nova.conf
-sed -i '/rabbit_password = .*/d' /etc/nova/nova.conf
+#sed -i '/rpc_backend = .*/d' /etc/nova/nova.conf
+#sed -i '/rabbit_host = .*/d' /etc/nova/nova.conf
+#sed -i '/rabbit_password = .*/d' /etc/nova/nova.conf
+#
+#sed -i '/my_ip = .*/d' /etc/nova/nova.conf
+#sed -i '/vncserver_listen = .*/d' /etc/nova/nova.conf
+#sed -i '/vncserver_proxyclient_address = .*/d' /etc/nova/nova.conf
+#
+#sed -i '/auth_strategy = .*/d' /etc/nova/nova.conf
+#
+#sed -i '/\[keystone_authtoken\]/d' /etc/nova/nova.conf
+#sed -i '/auth_uri = .*/d' /etc/nova/nova.conf
+#sed -i '/auth_host = .*/d' /etc/nova/nova.conf
+#sed -i '/auth_port = .*/d' /etc/nova/nova.conf
+#sed -i '/auth_protocol = .*/d' /etc/nova/nova.conf
+#sed -i '/admin_tenant_name = .*/d' /etc/nova/nova.conf
+#sed -i '/admin_user = .*/d' /etc/nova/nova.conf
+#sed -i '/admin_password = .*/d' /etc/nova/nova.conf
 
-sed -i '/my_ip = .*/d' /etc/nova/nova.conf
-sed -i '/vncserver_listen = .*/d' /etc/nova/nova.conf
-sed -i '/vncserver_proxyclient_address = .*/d' /etc/nova/nova.conf
 
-sed -i '/auth_strategy = .*/d' /etc/nova/nova.conf
+#echo -e "\n[database]" >> /etc/nova/nova.conf
+sed -i "1i [database]\nconnection = mysql://nova:$NOVA_DBPASS@controller/nova" /etc/nova/nova.conf
+#echo -e "\n[database]\nconnection = mysql://nova:$NOVA_DBPASS@controller/nova\n" >> /etc/nova/nova.conf
+#echo -e "\nsql_connection = mysql://nova:cuscs@controller/nova" >> /etc/nova/nova.conf
 
-sed -i '/\[keystone_authtoken\]/d' /etc/nova/nova.conf
-sed -i '/auth_uri = .*/d' /etc/nova/nova.conf
-sed -i '/auth_host = .*/d' /etc/nova/nova.conf
-sed -i '/auth_port = .*/d' /etc/nova/nova.conf
-sed -i '/auth_protocol = .*/d' /etc/nova/nova.conf
-sed -i '/admin_tenant_name = .*/d' /etc/nova/nova.conf
-sed -i '/admin_user = .*/d' /etc/nova/nova.conf
-sed -i '/admin_password = .*/d' /etc/nova/nova.conf
-
-
-echo -e "\nsql_connection = mysql://nova:cuscs@controller/nova" >> /etc/nova/nova.conf
-echo "rpc_backend = rabbit" >> /etc/nova/nova.conf
+echo -e "rpc_backend = rabbit" >> /etc/nova/nova.conf
 echo "rabbit_host = controller" >> /etc/nova/nova.conf
-echo "rabbit_password = cuscs" >> /etc/nova/nova.conf
+echo "rabbit_password = $RABBIT_PASS" >> /etc/nova/nova.conf
 
 echo -e "my_ip = $IP_ADDRESS" >> /etc/nova/nova.conf
-#echo "my_ip = 10.0.0.11" >> /etc/nova/nova.conf
 echo -e "vncserver_listen = $IP_ADDRESS" >> /etc/nova/nova.conf
 echo -e "vncserver_proxyclient_address = $IP_ADDRESS" >> /etc/nova/nova.conf
 
-echo "auth_strategy = keystone" >> /etc/nova/nova.conf
+echo -e "auth_strategy = keystone" >> /etc/nova/nova.conf
 
-echo "[keystone_authtoken]" >> /etc/nova/nova.conf
+echo -e "[keystone_authtoken]" >> /etc/nova/nova.conf
 echo "auth_uri = http://controller:5000" >> /etc/nova/nova.conf
 echo "auth_host = controller" >> /etc/nova/nova.conf
 echo "auth_port = 35357" >> /etc/nova/nova.conf
@@ -58,8 +63,6 @@ echo "auth_protocol = http" >> /etc/nova/nova.conf
 echo "admin_tenant_name = service" >> /etc/nova/nova.conf
 echo "admin_user = nova" >> /etc/nova/nova.conf
 echo "admin_password = cuscs" >> /etc/nova/nova.conf
-
-
 
 
 ##	Database

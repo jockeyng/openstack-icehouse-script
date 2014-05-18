@@ -8,7 +8,7 @@ while [ $# -gt 0 ]
  do
    case "$1" in
    keystone)
-   		./keystone_install
+   		./keystone
    		;;
    keystone_a)
    		echo -e 'y\ny\n' | ./keystone_install
@@ -17,7 +17,7 @@ while [ $# -gt 0 ]
    		echo -e 'y\ny\n' | ./glance_install
    		;;
    nova)
-   		./nova_install
+   		./nova
    		#echo -e 'y\ny\n' | ./nova_install
    		;;
 	neutron)
