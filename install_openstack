@@ -1,6 +1,9 @@
 #!/bin/bash
 #echo "Installing Service......"
 
+RABBIT_PASS=cuscs
+
+
 while [ $# -gt 0 ]
  do
    case "$1" in
@@ -33,6 +36,7 @@ while [ $# -gt 0 ]
 		;;   		
    mq)
    		apt-get install rabbitmq-server
+   		rabbitmqctl change_password guest $RABBIT_PASS
    		#./mysql_install
    		;;
    mysql)
@@ -46,7 +50,7 @@ while [ $# -gt 0 ]
 	shift
 done
 
-if [ $# -eq 0 ]; then
-	echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
-fi
+#if [ $# -eq 0 ]; then
+	#echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
+#fi
 
