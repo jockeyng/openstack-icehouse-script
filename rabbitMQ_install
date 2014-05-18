@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "Installing rabbitMQ......"
+
+#sed -i 's/ubuntu/controller/g' /etc/hostname
+ 
+#apt-get --purge remove --auto-remove rabbitmq-server
+#apt-get clean
+apt-get install rabbitmq-server
+
+rabbitmqctl change_password guest cuscs
+
+rabbitmqctl

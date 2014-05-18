@@ -1,0 +1,83 @@
+#!/bin/bash
+echo "Installing Keystone......"
+
+sed -i 's/ubuntu/controller/g' /etc/hostname
+ 
+apt-get --purge remove --auto-remove keystone
+apt-get clean
+apt-get install keystone
+
+##	Config File
+sed -i 's/connection =.*/connection = mysql:\/\/keystone:cuscs@controller\/keystone/g' /etc/keystone/keystone.conf 
+sed -i 's/#admin_token=.*/admin_token=ADMIN/g' /etc/keystone/keystone.conf 
+sed -i 's/#log_dir.* =/log_dir=\/var\/log\/keystone/g' /etc/keystone/keystone.conf 
+
+#sed -i 's/connection =/#connection =/g' /etc/keystone/keystone.conf 
+#cat keystone.conf >> /etc/keystone/keystone.conf 
+
+
+##	DB client 
+rm -f /var/lib/keystone/keystone.db
+
+mysql -uroot -pcuscs -e "DROP DATABASE keystone;"
+mysql -uroot -pcuscs -e "CREATE DATABASE keystone;"
+mysql -uroot -pcuscs -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY 'cuscs';"
+mysql -uroot -pcuscs -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY 'cuscs';"
+
+su -s /bin/sh -c 'keystone-manage db_sync' keystone
+
+
+service keystone restart
+
+
+echo "Processing Define users, tenants, and roles......"
+echo "Using admin_token based method (for admin tasks)......"
+##	env
+export OS_SERVICE_TOKEN=ADMIN
+export OS_SERVICE_ENDPOINT=http://controller:35357/v2.0
+
+sleep 1
+##	Create an administrative user
+keystone user-create --name=admin --pass=cuscs --email=jockeyng@hotmail.com
+keystone role-create --name=admin
+keystone tenant-create --name=admin --description="Admin Tenant"
+keystone user-role-add --user=admin --tenant=admin --role=admin
+keystone user-role-add --user=admin --role=_member_ --tenant=admin
+
+##	Create a normal user
+keystone user-create --name=demo --pass=cuscs --email=jockeyng@hotmail.com	
+keystone tenant-create --name=demo --description="Demo Tenant"
+keystone user-role-add --user=demo --role=_member_ --tenant=demo
+
+##	Create a service tenant
+keystone tenant-create --name=service --description="Service Tenant"
+
+##	Define services and API endpoints
+keystone service-create --name=keystone --type=identity \
+  --description="OpenStack Identity"
+
+keystone endpoint-create \
+  --service-id=$(keystone service-list | awk '/ identity / {print $2}') \
+  --publicurl=http://controller:5000/v2.0 \
+  --internalurl=http://controller:5000/v2.0 \
+  --adminurl=http://controller:35357/v2.0
+
+
+echo -e "\nVerify......\n"
+echo "Using user/passwd based method (for user authentication and authorization)......"
+
+unset OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
+
+keystone --os-username=admin --os-password=cuscs \
+  --os-auth-url=http://controller:35357/v2.0 token-get
+
+export OS_USERNAME=admin
+export OS_PASSWORD=cuscs
+export OS_TENANT_NAME=admin
+export OS_AUTH_URL=http://controller:35357/v2.0
+
+source ./admin-openrc.sh
+
+keystone token-get
+keystone user-list
+keystone user-role-list --user admin --tenant admin

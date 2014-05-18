@@ -1,0 +1,88 @@
+#!/bin/bash
+
+IP_ADDRESS=10.0.0.11 
+
+
+case $1 in
+	"hello")
+		echo "Hello, how are you ?"
+		;;
+	"basic")
+		echo -e "basic configuration......"
+		
+		##	disable mod
+		echo -e "blacklist i2c_piix4" >> /etc/modprobe.d/blacklist.conf
+		
+		#	set ssh config
+		#AcceptEnv LANG LC_*
+		sed -i 's/AcceptEnv.*/#AcceptEnv LANG LC_*/g' /etc/ssh/sshd_config
+		
+		##	hostname
+		hostname
+		sed -i 's/ubuntu/compute1/g' /etc/hostname		
+				
+		##	hosts
+		#sed -i '3,4d' /etc/hosts
+		sed -i '2 a\192.168.0.11    controller\n192.168.0.31    compute1' /etc/hosts
+		
+		##	network
+		sed -i '1,10!d' /etc/network/interfaces
+		echo -e "\n# Internal by Bridge" >> /etc/network/interfaces
+		echo -e "auto eth1" >> /etc/network/interfaces
+		echo -e "iface eth1 inet static" >> /etc/network/interfaces
+		echo -e "address $IP_ADDRESS" >> /etc/network/interfaces
+		echo -e "netmask 255.255.255.0" >> /etc/network/interfaces
+		
+		/etc/init.d/networking restart
+		init 6
+		;;  
+	"ntp")
+		echo -e "\nInstall NTP......"
+		apt-get remove ntp
+		apt-get install ntp
+		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+		;;
+	"nova-node")
+		echo -e "\nInstall Nova Node......"
+		apt-get install nova-compute-kvm python-guestfs
+		
+		dpkg-statoverride  --update --add root root 0644 /boot/vmlinuz-$(uname -r)
+		
+		##	set config 
+		sed -i '1,16!d' /etc/nova/nova.conf
+		cat nova-node.conf >> /etc/nova/nova.conf
+		
+		##	check 0
+		echo -e "Check support hardware acceleration or not......"
+		egrep -c '(vmx|svm)' /proc/cpuinfo
+		
+		##	set config
+		sed -i 's/virt_type=.*/virt_type=qemu/g' /etc/nova/nova-compute.conf
+		
+		rm -f /var/lib/nova/nova.sqlite
+		
+		service nova-compute restart
+		;;
+	*)
+		echo "Usage: node <option> | keystone | glance | nova | nova_start | mysql | mq"
+		;;
+esac
+##	DB client 
+#apt-get install python-mysqldb
+#
+#
+#
+#apt-get install python-novaclient
+#apt-get install python-ceilometerclient
+#apt-get install python-cinderclient
+#apt-get install python-glanceclient
+#apt-get install python-heatclient
+#apt-get install python-keystoneclient
+#apt-get install python-neutronclient
+#apt-get install python-swiftclient
+#apt-get install python-troveclient
+
+
+
+
+#fi

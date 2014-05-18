@@ -1,0 +1,79 @@
+#!/bin/bash
+
+echo -e "\nInstalling Glance......\n"
+
+source admin-openrc.sh
+
+##	echo 'y\ny\n' | ./
+##	Image Server
+#apt-get --purge remove --auto-remove glance python-glanceclient
+#apt-get clean
+apt-get install glance python-glanceclient
+
+
+##	Config File
+sed -i 's/#connection =.*/connection = mysql:\/\/glance:cuscs@controller\/glance/g' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+sed -i 's/#flavor=.*/flavor=keystone/g' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+sed -i '/auth_uri = .*/d' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+sed -i 's/auth_host = .*/auth_uri = http:\/\/controller:5000\nauth_host = controller/g' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+sed -i 's/admin_tenant_name = .*/admin_tenant_name = service/g' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+sed -i 's/admin_user = .*/admin_user = glance/g' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+sed -i 's/admin_password = .*/admin_password = cuscs/g' /etc/glance/glance-api.conf /etc/glance/glance-registry.conf
+
+#	Notification System Options
+sed -i '/rpc_backend = .*/d' /etc/glance/glance-api.conf
+sed -i 's/rabbit_host =.*/rpc_backend = rabbit\nrabbit_host = controller/g' /etc/glance/glance-api.conf
+sed -i 's/rabbit_password =.*/rabbit_password = cuscs/g' /etc/glance/glance-api.conf
+#rpc_backend = rabbit
+#rabbit_host = controller
+#rabbit_password = RABBIT_PASS
+
+
+##	Database 
+rm -f /var/lib/glance/glance.sqlite
+
+mysql -uroot -pcuscs -e "DROP DATABASE glance;"
+mysql -uroot -pcuscs -e "CREATE DATABASE glance;"
+mysql -uroot -pcuscs -e "GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY 'cuscs';"
+mysql -uroot -pcuscs -e "GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY 'cuscs';"
+
+su -s /bin/sh -c 'glance-manage db_sync' glance
+
+keystone user-delete glance
+keystone user-create --name=glance --pass=cuscs --email=jockeyng@hotmail.com
+keystone user-role-add --user=glance --tenant=service --role=admin
+
+
+keystone service-delete glance
+keystone service-create --name=glance --type=image \
+  --description="OpenStack Image Service"
+keystone endpoint-create \
+  --service-id=$(keystone service-list | awk '/ image / {print $2}') \
+  --publicurl=http://controller:9292 \
+  --internalurl=http://controller:9292 \
+  --adminurl=http://controller:9292
+
+
+service glance-registry restart
+service glance-api restart
+
+
+
+echo -e "\nVerify......\n"
+
+rm -R /tmp/images
+mkdir /tmp/images
+cd /tmp/images/
+wget -N http://cdn.download.cirros-cloud.net/0.3.2/cirros-0.3.2-x86_64-disk.img
+
+
+#source admin-openrc.sh
+
+glance image-create --name "cirros-0.3.2-x86_64" --disk-format qcow2 \
+  --container-format bare --is-public True --progress < cirros-0.3.2-x86_64-disk.img
+
+
+glance image-list
+
+
+

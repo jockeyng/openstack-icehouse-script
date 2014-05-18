@@ -1,0 +1,52 @@
+#!/bin/bash
+#echo "Installing Service......"
+
+while [ $# -gt 0 ]
+ do
+   case "$1" in
+   keystone)
+   		./keystone_install
+   		;;
+   keystone_a)
+   		echo -e 'y\ny\n' | ./keystone_install
+   		;;
+   glance)
+   		echo -e 'y\ny\n' | ./glance_install
+   		;;
+   nova)
+   		./nova_install
+   		#echo -e 'y\ny\n' | ./nova_install
+   		;;
+	nova_restart)
+   		 		
+   		service nova-api restart
+		service nova-cert restart
+		service nova-consoleauth restart
+		service nova-scheduler restart
+		service nova-conductor restart
+		service nova-novncproxy restart
+
+		sleep 2
+
+		echo -e "\nVerify......\n"
+		nova image-list
+		;;   		
+   mq)
+   		apt-get install rabbitmq-server
+   		#./mysql_install
+   		;;
+   mysql)
+   		echo -e 'y\n' | ./mysql_install
+   		#./mysql_install
+   		;;
+   mysql_config)
+   		vi /etc/mysql/my.cnf
+   		;;
+	esac
+	shift
+done
+
+if [ $# -eq 0 ]; then
+	echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
+fi
+
