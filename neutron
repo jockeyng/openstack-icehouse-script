@@ -2,7 +2,10 @@
 
 ##	Pre-Config 
 IP_ADDRESS=10.0.0.11
+NEUTRON_DBPASS=cuscs
 NEUTRON_PASS=cuscs
+RABBIT_PASS=cuscs
+NOVA_PASS=cuscs
 
 ##	Start
 echo -e "\nInstalling Neutron......\n"
@@ -85,19 +88,96 @@ function restart()
 }
 
 
-while [ $# -gt 0 ]
-	do
-		case "$1" in
-			restart)
-				restart
-   				echo -e "\n......Neutron restarted\n"
-   			exit
-   			;;
-		esac
-	shift
-done
+function doConfig()
+{
+	#sed -i '/^connection/d' /etc/neutron/neutron.conf
+	#sed -i '/connection = .*/d' /etc/nova/nova.conf
+	#sed -i '1,16!d' /etc/nova/nova.conf
+	sed -i '/^auth_uri/d' /etc/neutron/neutron.conf
+	sed -i '466, $d' /etc/neutron/neutron.conf
 
 
+	sed -i "s/^connection =.*/connection = mysql:\/\/neutron:$NEUTRON_DBPASS@controller\/neutron/g" /etc/neutron/neutron.conf
+	sed -i "s/# auth_strategy.*/auth_strategy = keystone/g" /etc/neutron/neutron.conf
+	
+	sed -i 's/auth_host = .*/auth_uri = http:\/\/controller:5000\nauth_host = controller/g' /etc/neutron/neutron.conf
+	sed -i 's/admin_tenant_name = .*/admin_tenant_name = service/g' /etc/neutron/neutron.conf
+	sed -i 's/^admin_user = .*/admin_user = neutron/g' /etc/neutron/neutron.conf
+	sed -i "s/^admin_password = .*/admin_password = $NEUTRON_PASS/g" /etc/neutron/neutron.conf
+	
+	sed -i "s/# verbose = .*/verbose = True/g" /etc/neutron/neutron.conf
+	sed -i "s/# verbose = .*/verbose = True/g" /etc/neutron/neutron.conf
+	sed -i "/^service_provider.*/s/^/#/g" /etc/neutron/neutron.conf
+	
+	echo -e "rpc_backend = neutron.openstack.common.rpc.impl_kombu" >> /etc/neutron/neutron.conf
+	echo -e "rabbit_host = controller" >> /etc/neutron/neutron.conf
+	echo -e "rabbit_password = $RABBIT_PASS" >> /etc/neutron/neutron.conf
+	
+	echo -e "notify_nova_on_port_status_changes = True" >> /etc/neutron/neutron.conf
+	echo -e "notify_nova_on_port_data_changes = True" >> /etc/neutron/neutron.conf
+	echo -e "nova_url = http://controller:8774/v2" >> /etc/neutron/neutron.conf
+	echo -e "nova_admin_username = nova" >> /etc/neutron/neutron.conf
+	
+	##	To obtain the service tenant identifier (id)
+	SERVICE_TENANT_ID=$(echo "use keystone; select ID from project where name='service';" | mysql -uroot -pcuscs | grep -v 'ID')
+	echo -e "nova_admin_tenant_id = $SERVICE_TENANT_ID" >> /etc/neutron/neutron.conf
+	echo -e "nova_admin_password = $NOVA_PASS" >> /etc/neutron/neutron.conf
+	echo -e "nova_admin_auth_url = http://controller:35357/v2.0" >> /etc/neutron/neutron.conf
+	
+	echo -e "core_plugin = ml2" >> /etc/neutron/neutron.conf
+	echo -e "service_plugins = router" >> /etc/neutron/neutron.conf
+	echo -e "allow_overlapping_ips = True" >> /etc/neutron/neutron.conf
+	#echo -e "verbose = True" >> /etc/neutron/neutron.conf
+
+	
+	#mysql -uroot -pcuscs -e "USE keystone; select e.* from service s, endpoint e where s.id=e.service_id and s.type like '%network%';"
+	#mysql -uroot -pcuscs -e "use keystone; show tables;"
+	
+	grep '^connection\|auth_strategy\|auth_uri|\auth_host|\admin_tenant_name\|^admin_user\|^admin_password' /etc/neutron/neutron.conf
+	grep '^rpc_backend\|^rabbit_host\|^rabbit_password' /etc/neutron/neutron.conf
+	grep '^core_plugin\|^service_plugins\|^allow_overlapping_ips\|verbose' /etc/neutron/neutron.conf
+	grep '^service_provider' /etc/neutron/neutron.conf
+
+
+
+	#less /etc/neutron/neutron.conf
+}
+
+
+##	To create the external network
+function externalNetwork()
+{
+	neutron net-create ext-net --shared --router:external=True
+}
+
+
+##	tenant identifier (id):
+function tenant()
+{
+
+keystone tenant-get service
+		
+echo -e "\n"
+				
+SERVICE_TENANT_ID=$(echo "use keystone; select ID from project where name='service';" | mysql -uroot -pcuscs | grep -v 'ID')
+echo $SERVICE_TENANT_ID
+			
+#mysql -uroot -pcuscs -e "use keystone; select ID from project where name='service';"
+
+#mysql -uroot -pcuscs <<< "use keystone; select ID from project where name='service';" |
+#while IFS='\n' read ID
+#do
+#echo $ID
+#echo "HI"
+#done
+
+}
+
+
+
+
+function defaultInstall()
+{
 
 ###	Start
 
@@ -116,24 +196,54 @@ createIdentity
 ##	To install the Networking components
 components
 
-
-
-function test()
-{
-sed -i "s/^connection =.*/connection = mysql:\/\/neutron:$NEUTRON_DBPASS@controller\/neutron/g" /etc/neutron/neutron.conf
-sed -i "s/# auth_strategy.*/auth_strategy = keystone/g" /etc/neutron/neutron.conf
-
-sed -i 's/auth_host = .*/auth_uri = http:\/\/controller:5000\nauth_host = controller/g' /etc/neutron/neutron.conf
-sed -i 's/admin_tenant_name = .*/admin_tenant_name = service/g' /etc/neutron/neutron.conf
-sed -i 's/admin_user = .*/admin_user = neutron/g' /etc/neutron/neutron.conf
-sed -i "s/admin_password = .*/admin_password = $NEUTRON_PASS/g" /etc/neutron/neutron.conf
-
-echo -e "rpc_backend = neutron.openstack.common.rpc.impl_kombu" >> /etc/neutron/neutron.conf
-echo -e "rabbit_host = controller" >> /etc/neutron/neutron.conf
-echo -e "rabbit_password = $RABBIT_PASS" >> /etc/neutron/neutron.conf
-
-echo -e "rabbit_password = $RABBIT_PASS" >> /etc/neutron/neutron.conf
 }
+
+
+
+
+if [ $# -eq 0 ]; then
+	echo -e "\n......Default\n"
+
+	defaultInstall
+	
+	echo -e "\n......Neutron installed!\n"
+	exit
+	#echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
+fi
+
+while [ $# -gt 0 ]
+	do
+		case "$1" in
+			restart)
+				restart
+   				echo -e "\n......Neutron restarted\n"
+   			;;
+   			doConfig)				
+				doConfig
+   				echo -e "\n......doConfig\n"
+   			;;
+   			tenant)				
+				tenant
+   				echo -e "\n......show tenant\n"
+   			;;
+   			ext)
+				externalNetwork
+   				echo -e "\n......externalNetwork restarted\n"
+   			exit
+   			;;
+#			*)
+#				defaultInstall
+#   				echo -e "\n......Default restarted\n"
+#   			exit
+#   			;;
+		esac
+	shift
+done
+
+
+
+
+
 
 #nl /etc/neutron/neutron.conf | sed "1i [database]\nconnection = mysql://neutron:$NEUTRON_DBPASS@controller/neutron" 
 
@@ -151,4 +261,4 @@ echo -e "rabbit_password = $RABBIT_PASS" >> /etc/neutron/neutron.conf
 #echo -e "\nVerify......\n"
 #nova image-list
 
-echo -e "\n......Neutron installed!\n"
+

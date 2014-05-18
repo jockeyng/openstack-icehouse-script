@@ -4,6 +4,12 @@
 RABBIT_PASS=cuscs
 
 
+
+if [ $# -eq 0 ]; then
+	echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
+fi
+
+
 while [ $# -gt 0 ]
  do
    case "$1" in
@@ -53,7 +59,4 @@ while [ $# -gt 0 ]
 	shift
 done
 
-#if [ $# -eq 0 ]; then
-	#echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
-#fi
 

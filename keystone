@@ -36,6 +36,9 @@ su -s /bin/sh -c 'keystone-manage db_sync' keystone
 service keystone restart
 
 
+#mysql -uroot -pcuscs -e "USE keystone; select e.* from service s, endpoint e where s.id=e.service_id and s.type like '%network%';"
+
+
 echo "Processing Define users, tenants, and roles......"
 echo "Using admin_token based method (for admin tasks)......"
 ##	env
