@@ -1,18 +1,24 @@
 #!/bin/bash
 echo "Installing Keystone......"
 
-sed -i 's/ubuntu/controller/g' /etc/hostname
+KEYSTONE_DBPASS=cuscs
+ADMIN_TOKEN=ADMIN
  
-apt-get --purge remove --auto-remove keystone
-apt-get clean
+##	install package
+#apt-get --purge remove --auto-remove keystone
+#apt-get clean
+
 apt-get install keystone
 
-##	Config File
-sed -i 's/connection =.*/connection = mysql:\/\/keystone:cuscs@controller\/keystone/g' /etc/keystone/keystone.conf 
-sed -i 's/#admin_token=.*/admin_token=ADMIN/g' /etc/keystone/keystone.conf 
-sed -i 's/#log_dir.* =/log_dir=\/var\/log\/keystone/g' /etc/keystone/keystone.conf 
 
-#sed -i 's/connection =/#connection =/g' /etc/keystone/keystone.conf 
+##	Config File
+echo "Config Keystone......"
+sed -i "s/connection =.*/connection = mysql:\/\/keystone:$KEYSTONE_DBPASS@controller\/keystone/g" /etc/keystone/keystone.conf 
+sed -i "s/#admin_token=.*/admin_token=$ADMIN_TOKEN/g" /etc/keystone/keystone.conf 
+sed -i "s/#log_dir=.*/log_dir=\/var\/log\/keystone/g" /etc/keystone/keystone.conf 
+
+grep 'connection =\|admin_token\|log_dir' /etc/keystone/keystone.conf 
+
 #cat keystone.conf >> /etc/keystone/keystone.conf 
 
 
@@ -33,7 +39,7 @@ service keystone restart
 echo "Processing Define users, tenants, and roles......"
 echo "Using admin_token based method (for admin tasks)......"
 ##	env
-export OS_SERVICE_TOKEN=ADMIN
+export OS_SERVICE_TOKEN=$ADMIN_TOKEN
 export OS_SERVICE_ENDPOINT=http://controller:35357/v2.0
 
 sleep 1
