@@ -31,17 +31,63 @@ case $1 in
 	
 		#sudo /etc/init.d/networking restart
 		cat /etc/hosts
-		echo -e "......Done!"
 		;;
 	*)
 		echo -e "Config Hosts......"
 		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
 		sudo /etc/init.d/networking restart
 		echo -e "......Done!"
-		;;
+		;;	
+	esac
+}
 
+
+function doNTP()
+{
+##	$OS
+case $1 in
+	CentOS)
+		#echo -e "Config NTP......"
+		#apt-get remove ntp
+		yum install ntp
+		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+		;;
+	*)
+		echo -e "......Done!"
+	#		apt-get remove ntp
+#		apt-get install ntp
+#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+#		;;
+	esac
+}
+
+
+
+function doPing()
+{
+	##	$OS
+	case $1 in
+	
+		CentOS)
+			# controller
+			ping -c 4 openstack.org
+			
+
+			ping -c 4 compute1
+			ping -c 4 10.0.1.31
+			# network
+			#echo -e "$NETWORK_NODE_IP\t$NETWORK_NODE_NAME" >> /etc/hosts
+			# compute1
+			#echo -e "$COMPUTE_NODE_IP\t$COMPUTE_NODE_NAME" >> /etc/hosts
 		
-		
+			#sudo /etc/init.d/networking restart
+			#echo -e "......Done!"
+			;;
+		*)
+			echo -e "Config Hosts......"
+			sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
+			sudo /etc/init.d/networking restart
+			;;
 	esac
 }
 
@@ -49,6 +95,10 @@ case $1 in
 case $1 in
 	"hello")
 		echo "Hello, how are you ?"
+		;;
+	"ping")
+		echo -e "Ping Hosts......"
+		doPing $OS
 		;;
 	"hosts")
 		doHosts $OS
@@ -97,9 +147,11 @@ case $1 in
 		;;  
 	"ntp")
 		echo -e "\nInstall NTP......"
-		apt-get remove ntp
-		apt-get install ntp
-		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+		doNTP $OS
+#		apt-get remove ntp
+#		apt-get install ntp
+#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+		echo -e "......Done!"		
 		;;
 	"nova-node")
 		echo -e "\nInstall Nova Node......"
