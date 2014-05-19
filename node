@@ -1,8 +1,49 @@
 #!/bin/bash
 
+OS=CentOS
 CONTROLLER_IP=10.0.0.11 
+CONTROLLER_NODE_IP=10.0.0.11 
+NETWORK_NODE_IP=10.0.0.21
+COMPUTE_NODE_IP=10.0.0.31 
+
+CONTROLLER_NODE_NAME=controller
+NETWORK_NODE_NAME=network
+COMPUTE_NODE_NAME=compute1
+
+
 CONTROLLER_NAME=controller
 COMPUTE1_IP=10.0.0.31 
+
+
+function doHosts()
+{
+##	$OS
+case $1 in
+
+	CentOS)
+		echo -e "Config Hosts......"
+		# controller
+		echo -e "$CONTROLLER_NODE_IP\t$CONTROLLER_NODE_NAME" >> /etc/hosts
+		# network
+		echo -e "$NETWORK_NODE_IP\t$NETWORK_NODE_NAME" >> /etc/hosts
+		# compute1
+		echo -e "$COMPUTE_NODE_IP\t$COMPUTE_NODE_NAME" >> /etc/hosts
+	
+		#sudo /etc/init.d/networking restart
+		cat /etc/hosts
+		echo -e "......Done!"
+		;;
+	*)
+		echo -e "Config Hosts......"
+		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
+		sudo /etc/init.d/networking restart
+		echo -e "......Done!"
+		;;
+
+		
+		
+	esac
+}
 
 
 case $1 in
@@ -10,10 +51,12 @@ case $1 in
 		echo "Hello, how are you ?"
 		;;
 	"hosts")
-		echo -e "Config Hosts......"
-		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
-		sudo /etc/init.d/networking restart
-		echo -e "......Done!"
+		doHosts $OS
+#		#case $OS in
+#		echo -e "Config Hosts......"
+#		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
+#		sudo /etc/init.d/networking restart
+#		echo -e "......Done!"
 		;;
 	"hostname")
 		echo -e "Config Hostname......"
