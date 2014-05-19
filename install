@@ -49,8 +49,8 @@ while [ $# -gt 0 ]
    		#./mysql_install
    		;;
    mysql)
-   		echo -e 'y\n' | ./mysql_install
-   		#./mysql_install
+   		#echo -e 'y\n' | ./mysql_install
+   		./mysql create
    		;;
    mysql_config)
    		vi /etc/mysql/my.cnf

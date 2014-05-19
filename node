@@ -47,10 +47,12 @@ function doNTP()
 ##	$OS
 case $1 in
 	CentOS)
-		#echo -e "Config NTP......"
 		#apt-get remove ntp
 		yum install ntp
 		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+		
+		service ntpd start 
+		chkconfig ntpd on
 		;;
 	*)
 		echo -e "......Done!"
