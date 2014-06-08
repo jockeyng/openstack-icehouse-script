@@ -3,11 +3,11 @@
 
 CONTROLLER_IP=10.0.0.11
 
-OS=CentOS
-CONTROLLER_IP=10.0.0.11 
-CONTROLLER_NODE_IP=10.0.0.11 
+#OS=Ubuntu
+CONTROLLER_IP=10.0.0.11
+CONTROLLER_NODE_IP=10.0.0.11
 NETWORK_NODE_IP=10.0.0.21
-COMPUTE_NODE_IP=10.0.0.31 
+COMPUTE_NODE_IP=10.0.0.31
 
 CONTROLLER_NODE_NAME=controller
 NETWORK_NODE_NAME=network
@@ -15,94 +15,102 @@ COMPUTE_NODE_NAME=compute1
 
 
 CONTROLLER_NAME=controller
-COMPUTE1_IP=10.0.0.31 
+COMPUTE1_IP=10.0.0.31
 
 
 function doCreate()
 {
 	##	$OS
 	case $1 in
-	
+
 		CentOS)
 			yum install mysql mysql-server MySQL-python
-		
-			sed -i '/^bind-address/d' /etc/my.cnf 
 
-			sed -i '/^character-set-server/d' /etc/my.cnf 
-			sed -i '/^init-connect/d' /etc/my.cnf 
-			sed -i '/^collation-server/d' /etc/my.cnf 
-			sed -i '/^default-storage-engine/d' /etc/my.cnf 
+			sed -i '/^bind-address/d' /etc/my.cnf
 
-			sed -i "s/\[mysqld\].*/\[mysqld\]\nbind-address = $CONTROLLER_NODE_IP/g" /etc/my.cnf 
+			sed -i '/^character-set-server/d' /etc/my.cnf
+			sed -i '/^init-connect/d' /etc/my.cnf
+			sed -i '/^collation-server/d' /etc/my.cnf
+			sed -i '/^default-storage-engine/d' /etc/my.cnf
+
+			sed -i "s/\[mysqld\].*/\[mysqld\]\nbind-address = $CONTROLLER_NODE_IP/g" /etc/my.cnf
 
 			sed -i "s/\[mysqld\].*/\[mysqld\]\ncharacter-set-server = utf8/g" /etc/my.cnf
 			sed -i "s/\[mysqld\].*/\[mysqld\]\ninit-connect = 'SET NAMES utf8'/g" /etc/my.cnf
 			sed -i "s/\[mysqld\].*/\[mysqld\]\ncollation-server = utf8_general_ci/g" /etc/my.cnf
 			sed -i "s/\[mysqld\].*/\[mysqld\]\ndefault-storage-engine = innodb/g" /etc/my.cnf
 
-			grep '^bind-address\|character-set-server\|init-connect\|collation-server\|default-storage-engine' /etc/my.cnf 
+			grep '^bind-address\|character-set-server\|init-connect\|collation-server\|default-storage-engine' /etc/my.cnf
 
-			service mysqld start 
+			service mysqld start
 			chkconfig mysqld on
-			
+
 			/usr/bin/mysqladmin -u root password 'cuscs'
 			/usr/bin/mysqladmin -u root -h controller password 'cuscs'
 			mysql_install_db
 			mysql_secure_installation
 			;;
-		*)
+		Ubuntu)
 			#ps aux | grep apt
-#kill $(ps aux | grep 'mysql csp_build.py' | awk '{print $2}')
-#ps aux | grep mysql| awk '{print $2}'
-#ps auxf |grep 'm csp_build.py'|`awk '{ print "kill " $2 }'`
-#kill -Hup $(ps ux | grep mysql | awk 'NR == 1 {next} {print $2}' | uniq | sort)
+			#kill $(ps aux | grep 'mysql csp_build.py' | awk '{print $2}')
+			#ps aux | grep mysql| awk '{print $2}'
+			#ps auxf |grep 'm csp_build.py'|`awk '{ print "kill " $2 }'`
+			#kill -Hup $(ps ux | grep mysql | awk 'NR == 1 {next} {print $2}' | uniq | sort)
 
-#apt-get remove --purge mysql-server python-mysqldb
-#apt-get autoremove --purge mysql-server python-mysqldb
-#apt-get clean
-#apt-get install mysql-server python-mysqldb
-#
-###	Config File
-#sed -i "s/bind-address.*/bind-address = $CONTROLLER_IP/g" /etc/mysql/my.cnf 
-#sed -i "97a default-storage-engine = innodb \ncollation-server = utf8_general_ci \ninit-connect = 'SET NAMES utf8' \ncharacter-set-server = utf8" /etc/mysql/my.cnf
+			#apt-get remove --purge mysql-server python-mysqldb
+			#apt-get autoremove --purge mysql-server python-mysqldb
+			#apt-get clean
+			apt-get install mysql-server python-mysqldb
+
+			###	Config File
+			sed -i "s/bind-address.*/bind-address = $CONTROLLER_NODE_IP/g" /etc/mysql/my.cnf
+			sed -i "97a default-storage-engine = innodb \ncollation-server = utf8_general_ci \ninit-connect = 'SET NAMES utf8' \ncharacter-set-server = utf8" /etc/mysql/my.cnf
+
+			grep '^bind-address\|character-set-server\|init-connect\|collation-server\|default-storage-engine' /etc/mysql/my.cnf
+
+			# service mysql restart
+			# mysql_install_db
+			# mysql_secure_installation
 
 			;;
 	esac
 }
 
+function doClient()
+{
+	##	$OS
+	case $1 in
+		Ubuntu)
+			apt-get install python-mysqldb
+	;;
+	esac
+}
 
+echo -e "Doing $2......"
 case $1 in
 	"tmp")
 		echo -e "tmp......"
-#		sed -i '/^bind-address/d' /etc/my.cnf 
-#		#sed -i "s/bind-address.*/bind-address = $CONTROLLER_IP/g" /etc/my.cnf 
-#		sed -i "s/\[mysqld\].*/\[mysqld\]\nbind-address = $CONTROLLER_NODE_IP/g" /etc/my.cnf 
-		#grep '^bind-address\|character-set-server\|init-connect\|collation-server\|default-storage-engine' /etc/my.cnf 
+#		sed -i '/^bind-address/d' /etc/my.cnf
+#		#sed -i "s/bind-address.*/bind-address = $CONTROLLER_IP/g" /etc/my.cnf
+#		sed -i "s/\[mysqld\].*/\[mysqld\]\nbind-address = $CONTROLLER_NODE_IP/g" /etc/my.cnf
+		#grep '^bind-address\|character-set-server\|init-connect\|collation-server\|default-storage-engine' /etc/my.cnf
 		;;
 	"create")
 		echo -e "Installing Mysql Service......"
-		doCreate $OS
+		doCreate $2
 		echo -e "......Done"
+		;;
+	"client")
+		echo -e "Installing Mysql client......"
+		doClient $2
+		echo -e "......Done"
+		;;
+	"test")
+		echo -e "Test $2"
 		;;
 	*)
 		echo "Usage: node <option> | keystone | glance | nova | nova_start | mysql | mq"
 		;;
 esac
-
-##ps aux | grep apt
-##kill $(ps aux | grep 'mysql csp_build.py' | awk '{print $2}')
-##ps aux | grep mysql| awk '{print $2}'
-##ps auxf |grep 'm csp_build.py'|`awk '{ print "kill " $2 }'`
-##kill -Hup $(ps ux | grep mysql | awk 'NR == 1 {next} {print $2}' | uniq | sort)
-#
-#apt-get remove --purge mysql-server python-mysqldb
-#apt-get autoremove --purge mysql-server python-mysqldb
-#apt-get clean
-#apt-get install mysql-server python-mysqldb
-#
-###	Config File
-#sed -i "s/bind-address.*/bind-address = $CONTROLLER_IP/g" /etc/mysql/my.cnf 
-#sed -i "97a default-storage-engine = innodb \ncollation-server = utf8_general_ci \ninit-connect = 'SET NAMES utf8' \ncharacter-set-server = utf8" /etc/mysql/my.cnf
-
 
 

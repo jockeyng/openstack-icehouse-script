@@ -6,73 +6,75 @@ OS=Ubuntu
 
 
 
-if [ $# -eq 0 ]; then
-	echo "Usage: install <option> | keystone | glance | nova | nova_start | mysql | mq"
-fi
+#if [ $# -eq 0 ]; then
+#fi
 
 
-while [ $# -gt 0 ]
- do
-   case "$1" in
-   keystone)
-   		./keystone
-   		;;
-   keystone_a)
-   		echo -e 'y\ny\n' | ./keystone_install
-   		;;
-   glance)
-   		echo -e 'y\ny\n' | ./glance_install
-   		;;
-   nova)
-   		./nova
-   		#echo -e 'y\ny\n' | ./nova_install
-   		;;
-	neutron)
-   		./neutron
-   		;;
-	nova_restart)
-
-   	service nova-api restart
-		service nova-cert restart
-		service nova-consoleauth restart
-		service nova-scheduler restart
-		service nova-conductor restart
-		service nova-novncproxy restart
-
-		sleep 2
-
-		echo -e "\nVerify......\n"
-		nova image-list
+#while [ $# -gt 0 ]
+# do
+case "$1" in
+h)
+	./node hosts $OS
+	;;
+keystone)
+		./keystone
 		;;
-   mq)
-		case $OS in
-			CentOS)
-				echo -e "\nMQ......\n"
-				yum install qpid-cpp-server
+keystone_a)
+		echo -e 'y\ny\n' | ./keystone_install
+		;;
+glance)
+		echo -e 'y\ny\n' | ./glance_install
+		;;
+nova)
+		./nova
+		#echo -e 'y\ny\n' | ./nova_install
+		;;
+neutron)
+		./neutron
+		;;
+nova_restart)
 
-				sed -i "s/auth=.*/auth=no/g" /etc/qpidd.conf
-				grep '^auth' /etc/qpidd.conf
+	service nova-api restart
+	service nova-cert restart
+	service nova-consoleauth restart
+	service nova-scheduler restart
+	service nova-conductor restart
+	service nova-novncproxy restart
 
-				service qpidd start
-				chkconfig qpidd on
+	sleep 2
 
-				;;
-			*)
-   				apt-get install rabbitmq-server
-   				rabbitmqctl change_password guest $RABBIT_PASS
-   				#./mysql_install
-   				;;
-		esac
-   		;;
-   mysql)
-   		#echo -e 'y\n' | ./mysql_install
-   		./mysql create
-   		;;
-   mysql_config)
-   		vi /etc/mysql/my.cnf
-   		;;
+	echo -e "\nVerify......\n"
+	nova image-list
+	;;
+mq)
+	case $OS in
+		CentOS)
+			echo -e "\nMQ......\n"
+			yum install qpid-cpp-server
+
+			sed -i "s/auth=.*/auth=no/g" /etc/qpidd.conf
+			grep '^auth' /etc/qpidd.conf
+
+			service qpidd start
+			chkconfig qpidd on
+			;;
+		Ubuntu)
+			apt-get install rabbitmq-server
+			rabbitmqctl change_password guest $RABBIT_PASS
+			;;
 	esac
-	shift
-done
+		;;
+mysql)
+	#echo -e 'y\n' | ./mysql_install
+	./mysql create $OS
+		;;
+mysql_config)
+		vi /etc/mysql/my.cnf
+		;;
+   *)
+	  echo "Usage: install <option> | keystone | glance | nova | nova_start | mysql | mq"
+esac
+#	shift
+#done
 
 

@@ -1,18 +1,21 @@
 #!/bin/bash
 
-OS=CentOS
-CONTROLLER_IP=10.0.0.11 
-CONTROLLER_NODE_IP=10.0.0.11 
+#OS=Ubuntu
+CONTROLLER_IP=10.0.0.11
+
+CONTROLLER_NODE_IP=10.0.0.11
 NETWORK_NODE_IP=10.0.0.21
-COMPUTE_NODE_IP=10.0.0.31 
+COMPUTE_NODE_IP=10.0.0.31
+
+COMPUTE1_IP=10.0.0.31
+
 
 CONTROLLER_NODE_NAME=controller
 NETWORK_NODE_NAME=network
 COMPUTE_NODE_NAME=compute1
 
-
 CONTROLLER_NAME=controller
-COMPUTE1_IP=10.0.0.31 
+
 
 
 function doHosts()
@@ -28,42 +31,41 @@ case $1 in
 		echo -e "$NETWORK_NODE_IP\t$NETWORK_NODE_NAME" >> /etc/hosts
 		# compute1
 		echo -e "$COMPUTE_NODE_IP\t$COMPUTE_NODE_NAME" >> /etc/hosts
-	
+
 		#sudo /etc/init.d/networking restart
 		cat /etc/hosts
-		
+
 		sed -i 's/^HOSTNAME=.*/HOSTNAME=controller/g' /etc/sysconfig/network
 		cat /etc/sysconfig/network
-		
+
 		;;
-	*)
-		echo -e "Config Hosts......"
-		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
+	Ubuntu)
+		sed -i "2 a$CONTROLLER_NODE_IP\t$CONTROLLER_NODE_NAME\n$NETWORK_NODE_IP\t$NETWORK_NODE_NAME\n$COMPUTE_NODE_IP\t$COMPUTE_NODE_NAME" /etc/hosts
 		sudo /etc/init.d/networking restart
-		echo -e "......Done!"
-		;;	
+		cat /etc/hosts
+		;;
 	esac
 }
 
 
 function doNTP()
 {
-##	$OS
-case $1 in
-	CentOS)
-		#apt-get remove ntp
-		yum install ntp
-		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
-		
-		service ntpd start 
-		chkconfig ntpd on
-		;;
-	*)
-		echo -e "......Done!"
-	#		apt-get remove ntp
-#		apt-get install ntp
-#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
-#		;;
+	##	$OS
+	case $1 in
+		CentOS)
+			#apt-get remove ntp
+			yum install ntp
+			sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+
+			service ntpd start
+			chkconfig ntpd on
+			;;
+		Ubuntu)
+			echo -e "......Done!"
+		#	apt-get remove ntp
+			apt-get install ntp
+	#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+	#		;;
 	esac
 }
 
@@ -79,7 +81,7 @@ function doPing()
 
 			ping -c 4 compute1
 			ping -c 4 10.0.0.31
-			
+
 			#echo -e "......Done!"
 			;;
 		*)
@@ -97,11 +99,11 @@ function doOpenstackPackage()
 	case $1 in
 		CentOS)
 			yum install http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/rdo-release-icehouse-3.noarch.rpm
-			
+
 			##
 			#wget http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
 			#yum install epel-release-6-8.noarch.rpm
-			
+
 			yum install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 			yum install crudini
 
@@ -133,9 +135,9 @@ function doNetwork()
 			#ls /etc/sysconfig/network-scripts
 
 			#cat /etc/sysconfig/network-scripts/ifcfg*
-			
+
 			rm -f /etc/sysconfig/network-scripts/ifcfg-eth0
-			rm -f /etc/sysconfig/network-scripts/ifcfg-eth1	
+			rm -f /etc/sysconfig/network-scripts/ifcfg-eth1
 
 			echo -e "TYPE=Ethernet" >> /etc/sysconfig/network-scripts/ifcfg-eth0
 			echo -e "DEVICE=eth0" >> /etc/sysconfig/network-scripts/ifcfg-eth0
@@ -169,7 +171,17 @@ function doNetwork()
 			chkconfig network on
 			service network restart
 			;;
-		*)
+		Ubuntu)
+			##	network
+			sed -i '1,10!d' /etc/network/interfaces
+			echo -e "\n# Internal by Bridge" >> /etc/network/interfaces
+			echo -e "auto eth1" >> /etc/network/interfaces
+			echo -e "iface eth1 inet static" >> /etc/network/interfaces
+			echo -e "address $CONTROLLER_NODE_IP" >> /etc/network/interfaces
+			echo -e "netmask 255.255.255.0" >> /etc/network/interfaces
+
+			cat /etc/network/interfaces
+			/etc/init.d/networking restart
 			;;
 	esac
 }
@@ -179,7 +191,7 @@ function doEnv()
 {
 	##	$OS
 	case $1 in
-		CentOS)
+		CentOS | Ubuntu)
 			sed -i "s/^AcceptEnv/#AcceptEnv/g" /etc/ssh/sshd_config
 			grep 'AcceptEnv' /etc/ssh/sshd_config
 			;;
@@ -188,48 +200,54 @@ function doEnv()
 	esac
 }
 
+function doHostname()
+{
+	##	$OS
+	case $1 in
+		CentOS | Ubuntu)
+		echo -e "doHostname......"
+			hostname
+			sed -i "s/.*/$CONTROLLER_NODE_NAME/g" /etc/hostname
+			sudo service hostname restart
+			hostname
+			;;
+		*)
+			echo -e "doHostname......???"
+			;;
+	esac
+}
 
+
+echo -e "Doing $2......"
 case $1 in
-	"hello")
-		echo "Hello, how are you ?"
-		;;
 	"env")
 		echo -e "Do Env......"
 		doEnv $OS
 		echo -e "......Done Env"
 		;;
 	"hosts")
-		doHosts $OS
-#		#case $OS in
-#		echo -e "Config Hosts......"
-#		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
-#		sudo /etc/init.d/networking restart
-#		echo -e "......Done!"
+		echo -e "Do Hosts......"
+		doHosts $2
+		echo -e "......Done Hosts"
 		;;
 	"pkg")
 		echo -e "OpenstackPackage......"
 		doOpenstackPackage $OS
 		echo -e "......Done OpenstackPackage"
-		;;		
+		;;
 	"ntp")
 		echo -e "\nInstall NTP......"
-		doNTP $OS
-#		apt-get remove ntp
-#		apt-get install ntp
-#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
-		echo -e "......Done!"		
-		;;		
+		doNTP $2
+		echo -e "......Done!"
+		;;
 	"net")
 		echo -e "Do Network......"
-		doNetwork $OS
+		doNetwork $2
 		echo -e "......Done Network"
 		;;
 	"hostname")
 		echo -e "Config Hostname......"
-		hostname
-		sed -i "s/.*/$CONTROLLER_NAME/g" /etc/hostname		
-		sudo service hostname restart
-		hostname
+		doHostname $2
 		echo -e "......Done!"
 		;;
 	"ping")
@@ -238,59 +256,51 @@ case $1 in
 		;;
 	"basic")
 		echo -e "basic configuration......"
-		
+
 		##	disable mod
 		echo -e "blacklist i2c_piix4" >> /etc/modprobe.d/blacklist.conf
-		
+
 		#	set ssh config
 		#AcceptEnv LANG LC_*
 		sed -i 's/AcceptEnv.*/#AcceptEnv LANG LC_*/g' /etc/ssh/sshd_config
-		
+
 		##	hostname
 		hostname
-		sed -i "s/.*/$CONTROLLER_NAME/g" /etc/hostname		
-				
+		sed -i "s/.*/$CONTROLLER_NAME/g" /etc/hostname
+
 		##	hosts
 		#sed -i '3,4d' /etc/hosts
-		sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
-		
-		##	network
-		sed -i '1,10!d' /etc/network/interfaces
-		echo -e "\n# Internal by Bridge" >> /etc/network/interfaces
-		echo -e "auto eth1" >> /etc/network/interfaces
-		echo -e "iface eth1 inet static" >> /etc/network/interfaces
-		echo -e "address $IP_ADDRESS" >> /etc/network/interfaces
-		echo -e "netmask 255.255.255.0" >> /etc/network/interfaces
-		
-		/etc/init.d/networking restart
+		#sed -i "2 a$CONTROLLER_IP\tcontroller\n$COMPUTE1_IP\tcompute1" /etc/hosts
+
+
 		init 6
-		;;  
+		;;
 	"nova-node")
 		echo -e "\nInstall Nova Node......"
 		apt-get install nova-compute-kvm python-guestfs
-		
+
 		dpkg-statoverride  --update --add root root 0644 /boot/vmlinuz-$(uname -r)
-		
-		##	set config 
+
+		##	set config
 		sed -i '1,16!d' /etc/nova/nova.conf
 		cat nova-node.conf >> /etc/nova/nova.conf
-		
+
 		##	check 0
 		echo -e "Check support hardware acceleration or not......"
 		egrep -c '(vmx|svm)' /proc/cpuinfo
-		
+
 		##	set config
 		sed -i 's/virt_type=.*/virt_type=qemu/g' /etc/nova/nova-compute.conf
-		
+
 		rm -f /var/lib/nova/nova.sqlite
-		
+
 		service nova-compute restart
 		;;
 	*)
 		echo "Usage: node <option> | keystone | glance | nova | nova_start | mysql | mq"
 		;;
 esac
-##	DB client 
+##	DB client
 #apt-get install python-mysqldb
 #
 #
