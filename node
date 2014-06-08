@@ -31,6 +31,10 @@ case $1 in
 	
 		#sudo /etc/init.d/networking restart
 		cat /etc/hosts
+		
+		sed -i 's/^HOSTNAME=.*/HOSTNAME=controller/g' /etc/sysconfig/network
+		cat /etc/sysconfig/network
+		
 		;;
 	*)
 		echo -e "Config Hosts......"
@@ -69,20 +73,13 @@ function doPing()
 {
 	##	$OS
 	case $1 in
-	
 		CentOS)
 			# controller
 			ping -c 4 openstack.org
-			
 
 			ping -c 4 compute1
-			ping -c 4 10.0.1.31
-			# network
-			#echo -e "$NETWORK_NODE_IP\t$NETWORK_NODE_NAME" >> /etc/hosts
-			# compute1
-			#echo -e "$COMPUTE_NODE_IP\t$COMPUTE_NODE_NAME" >> /etc/hosts
-		
-			#sudo /etc/init.d/networking restart
+			ping -c 4 10.0.0.31
+			
 			#echo -e "......Done!"
 			;;
 		*)
@@ -94,13 +91,112 @@ function doPing()
 }
 
 
+function doOpenstackPackage()
+{
+	##	$OS
+	case $1 in
+		CentOS)
+			yum install http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/rdo-release-icehouse-3.noarch.rpm
+			
+			##
+			#wget http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
+			#yum install epel-release-6-8.noarch.rpm
+			
+			yum install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+			yum install crudini
+
+			yum install openstack-utils
+			yum install openstack-selinux
+			yum upgrade
+			echo -e "......Done upgrade"
+			;;
+		*)
+			;;
+	esac
+}
+
+
+function doNetwork()
+{
+	##	$OS
+	case $1 in
+		CentOS)
+			service NetworkManager stop
+			chkconfig NetworkManager off
+			#yum erase NetworkManager
+
+			#rm -f /etc/udev/rules.d/70-persistent-net.rules
+			#rm -f /lib/udev/rules.d/75-persistent-net-generator.rules
+
+			##
+			#system-config-network
+			#ls /etc/sysconfig/network-scripts
+
+			#cat /etc/sysconfig/network-scripts/ifcfg*
+			
+			rm -f /etc/sysconfig/network-scripts/ifcfg-eth0
+			rm -f /etc/sysconfig/network-scripts/ifcfg-eth1	
+
+			echo -e "TYPE=Ethernet" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+			echo -e "DEVICE=eth0" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+			#echo -e "NAME=eth0" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+			echo -e "BOOTPROTO=dhcp" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+			echo -e "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+			echo -e "NM_CONTROLLED=no" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+
+			echo -e "TYPE=Ethernet" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "DEVICE=eth1" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "BOOTPROTO=static" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "IPADDR=10.0.0.11" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "NETMASK=255.255.255.0" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "GATEWAY=10.0.0.1" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+			echo -e "NM_CONTROLLED=no" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+
+			cat /etc/sysconfig/network-scripts/ifcfg-eth0
+			cat /etc/sysconfig/network-scripts/ifcfg-eth1
+
+			#DEFROUTE=yes
+			#IPV4_FAILURE_FATAL=yes
+			#IPV6INIT=no
+			#NAME="Auto eth0"
+			#UUID=9eb25987-a8e3-4517-9c68-9ed2bc8bbada
+			#HWADDR=08:00:27:04:0C:02
+			#PEERDNS=yes
+			#PEERROUTES=yes
+			#LAST_CONNECT=1400478559
+
+			chkconfig network on
+			service network restart
+			;;
+		*)
+			;;
+	esac
+}
+
+
+function doEnv()
+{
+	##	$OS
+	case $1 in
+		CentOS)
+			sed -i "s/^AcceptEnv/#AcceptEnv/g" /etc/ssh/sshd_config
+			grep 'AcceptEnv' /etc/ssh/sshd_config
+			;;
+		*)
+			;;
+	esac
+}
+
+
 case $1 in
 	"hello")
 		echo "Hello, how are you ?"
 		;;
-	"ping")
-		echo -e "Ping Hosts......"
-		doPing $OS
+	"env")
+		echo -e "Do Env......"
+		doEnv $OS
+		echo -e "......Done Env"
 		;;
 	"hosts")
 		doHosts $OS
@@ -110,6 +206,24 @@ case $1 in
 #		sudo /etc/init.d/networking restart
 #		echo -e "......Done!"
 		;;
+	"pkg")
+		echo -e "OpenstackPackage......"
+		doOpenstackPackage $OS
+		echo -e "......Done OpenstackPackage"
+		;;		
+	"ntp")
+		echo -e "\nInstall NTP......"
+		doNTP $OS
+#		apt-get remove ntp
+#		apt-get install ntp
+#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
+		echo -e "......Done!"		
+		;;		
+	"net")
+		echo -e "Do Network......"
+		doNetwork $OS
+		echo -e "......Done Network"
+		;;
 	"hostname")
 		echo -e "Config Hostname......"
 		hostname
@@ -117,6 +231,10 @@ case $1 in
 		sudo service hostname restart
 		hostname
 		echo -e "......Done!"
+		;;
+	"ping")
+		echo -e "Ping Hosts......"
+		doPing $OS
 		;;
 	"basic")
 		echo -e "basic configuration......"
@@ -147,14 +265,6 @@ case $1 in
 		/etc/init.d/networking restart
 		init 6
 		;;  
-	"ntp")
-		echo -e "\nInstall NTP......"
-		doNTP $OS
-#		apt-get remove ntp
-#		apt-get install ntp
-#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
-		echo -e "......Done!"		
-		;;
 	"nova-node")
 		echo -e "\nInstall Nova Node......"
 		apt-get install nova-compute-kvm python-guestfs

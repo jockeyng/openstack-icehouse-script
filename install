@@ -2,11 +2,12 @@
 #echo "Installing Service......"
 
 RABBIT_PASS=cuscs
+OS=Ubuntu
 
 
 
 if [ $# -eq 0 ]; then
-	echo "Usage: install_openstack <option> | keystone | glance | nova | nova_start | mysql | mq"
+	echo "Usage: install <option> | keystone | glance | nova | nova_start | mysql | mq"
 fi
 
 
@@ -30,8 +31,8 @@ while [ $# -gt 0 ]
    		./neutron
    		;;
 	nova_restart)
-   		 		
-   		service nova-api restart
+
+   	service nova-api restart
 		service nova-cert restart
 		service nova-consoleauth restart
 		service nova-scheduler restart
@@ -42,11 +43,26 @@ while [ $# -gt 0 ]
 
 		echo -e "\nVerify......\n"
 		nova image-list
-		;;   		
+		;;
    mq)
-   		apt-get install rabbitmq-server
-   		rabbitmqctl change_password guest $RABBIT_PASS
-   		#./mysql_install
+		case $OS in
+			CentOS)
+				echo -e "\nMQ......\n"
+				yum install qpid-cpp-server
+
+				sed -i "s/auth=.*/auth=no/g" /etc/qpidd.conf
+				grep '^auth' /etc/qpidd.conf
+
+				service qpidd start
+				chkconfig qpidd on
+
+				;;
+			*)
+   				apt-get install rabbitmq-server
+   				rabbitmqctl change_password guest $RABBIT_PASS
+   				#./mysql_install
+   				;;
+		esac
    		;;
    mysql)
    		#echo -e 'y\n' | ./mysql_install

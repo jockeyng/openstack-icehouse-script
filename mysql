@@ -44,6 +44,11 @@ function doCreate()
 
 			service mysqld start 
 			chkconfig mysqld on
+			
+			/usr/bin/mysqladmin -u root password 'cuscs'
+			/usr/bin/mysqladmin -u root -h controller password 'cuscs'
+			mysql_install_db
+			mysql_secure_installation
 			;;
 		*)
 			#ps aux | grep apt
@@ -67,32 +72,17 @@ function doCreate()
 
 
 case $1 in
-	"hello")
-		echo "Hello, how are you ?"
-		;;
 	"tmp")
 		echo -e "tmp......"
 #		sed -i '/^bind-address/d' /etc/my.cnf 
 #		#sed -i "s/bind-address.*/bind-address = $CONTROLLER_IP/g" /etc/my.cnf 
 #		sed -i "s/\[mysqld\].*/\[mysqld\]\nbind-address = $CONTROLLER_NODE_IP/g" /etc/my.cnf 
-		
 		#grep '^bind-address\|character-set-server\|init-connect\|collation-server\|default-storage-engine' /etc/my.cnf 
-
-
-
 		;;
 	"create")
 		echo -e "Installing Mysql Service......"
 		doCreate $OS
 		echo -e "......Done"
-		;;
-	"ntp")
-		echo -e "\nInstall NTP......"
-		doNTP $OS
-#		apt-get remove ntp
-#		apt-get install ntp
-#		sed -i 's/server ntp.ubuntu.com/server ntp.ubuntu.com\nserver 127.127.1.0\nfudge 127.127.1.0 stratum 10/g' /etc/ntp.conf
-		echo -e "......Done!"		
 		;;
 	*)
 		echo "Usage: node <option> | keystone | glance | nova | nova_start | mysql | mq"

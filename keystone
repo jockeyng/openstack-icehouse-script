@@ -1,8 +1,93 @@
 #!/bin/bash
-echo "Installing Keystone......"
 
 KEYSTONE_DBPASS=cuscs
 ADMIN_TOKEN=ADMIN
+
+OS=CentOS
+
+
+
+##	Database
+function useMysql()
+{
+	mysql -uroot -pcuscs -e "DROP database if exists keystone;"
+	mysql -uroot -pcuscs -e "CREATE DATABASE keystone;"
+	mysql -uroot -pcuscs -e "SHOW DATABASES;"
+	mysql -uroot -pcuscs -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY '$KEYSTONE_DBPASS';"
+	mysql -uroot -pcuscs -e "GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '$KEYSTONE_DBPASS';"
+
+}
+
+
+
+case $1 in
+	"hello")
+		echo "Hello, how are you ?"
+		;;
+	"tmp")
+		echo "TMP"
+		
+		yum install openstack-keystone python-keystoneclient
+		openstack-config --set /etc/keystone/keystone.conf database connection mysql://keystone:$KEYSTONE_DBPASS@controller/keystone
+		
+		grep '^connection' /etc/keystone/keystone.conf
+		
+		useMysql
+		
+		su -s /bin/sh -c 'keystone-manage db_sync' keystone
+		mysql -uroot -pcuscs -e "USE keystone; show tables;"
+		
+		;;
+	"tmp2")
+		ADMIN_TOKEN=$(openssl rand -hex 10)
+		echo $ADMIN_TOKEN
+		openstack-config --set /etc/keystone/keystone.conf DEFAULT admin_token $ADMIN_TOKEN
+		
+		keystone-manage pki_setup --keystone-user keystone --keystone-group keystone
+		chown -R keystone:keystone /etc/keystone/ssl
+		chmod -R o-rwx /etc/keystone/ssl
+		
+		service openstack-keystone start
+		chkconfig openstack-keystone on
+		;;
+	"createAdmin")
+		keystone user-create --name=admin --pass=ADMIN_PASS --email=ADMIN_EMAIL
+		keystone role-create --name=admin
+		keystone tenant-create --name=admin --description="Admin Tenant"
+		keystone user-role-add --user=admin --tenant=admin --role=admin
+		keystone user-role-add --user=admin --role=_member_ --tenant=admin
+		;;
+	"createUser")
+		keystone user-create --name=demo --pass=DEMO_PASS --email=DEMO_EMAIL
+		keystone tenant-create --name=demo --description="Demo Tenant"
+		keystone user-role-add --user=demo --role=_member_ --tenant=demo
+		keystone tenant-create --name=service --description="Service Tenant"
+		;;
+	"createAPI")
+		keystone service-create --name=keystone --type=identity --description="OpenStack Identity"
+		keystone endpoint-create \
+  			--service-id=$(keystone service-list | awk '/ identity / {print $2}') \
+  			--publicurl=http://controller:5000/v2.0 \
+  			--internalurl=http://controller:5000/v2.0 \
+  			--adminurl=http://controller:35357/v2.0
+		;;
+	"verify")
+		unset OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
+		;;
+	*)
+		echo "Usage: node <option> | keystone | glance | nova | nova_start | mysql | mq"
+		;;
+esac
+
+
+
+
+
+function doUbuntu()
+{
+echo "Installing Keystone......"
+
+
  
 ##	install package
 #apt-get --purge remove --auto-remove keystone
@@ -90,3 +175,5 @@ source ./admin-openrc.sh
 keystone token-get
 keystone user-list
 keystone user-role-list --user admin --tenant admin
+
+}
