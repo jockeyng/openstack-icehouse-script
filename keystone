@@ -6,7 +6,6 @@ ADMIN_TOKEN=ADMIN
 #OS=CentOS
 
 
-
 ##	Database
 function useMysql()
 {
